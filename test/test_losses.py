@@ -7,7 +7,8 @@ from .. import losses
 def test_cycle_consistency_loss_is_none_with_perfect_fakes(sess):
     batch_size, height, width, channels = [16, 2, 3, 1]
 
-    tf.set_random_seed(0)
+    # tf.set_random_seed(0)
+    tf.random.set_seed(0)
 
     images = tf.random_uniform((batch_size, height, width, channels), maxval=1)
 
@@ -22,7 +23,8 @@ def test_cycle_consistency_loss_is_none_with_perfect_fakes(sess):
 def test_cycle_consistency_loss_is_positive_with_imperfect_fake_x(sess):
     batch_size, height, width, channels = [16, 2, 3, 1]
 
-    tf.set_random_seed(0)
+    # tf.set_random_seed(0)
+    tf.random.set_seed(0)
 
     real_images = tf.random_uniform(
         (batch_size, height, width, channels), maxval=1,

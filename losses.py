@@ -49,7 +49,7 @@ def lsgan_loss_generator(prob_fake_is_real):
     Returns:
         The total LS-GAN loss.
     """
-    return tf.reduce_mean(tf.squared_difference(prob_fake_is_real, 1))
+    return tf.reduce_mean(tf.math.squared_difference(prob_fake_is_real, 1))
 
 
 def lsgan_loss_discriminator(prob_real_is_real, prob_fake_is_real):
@@ -71,5 +71,5 @@ def lsgan_loss_discriminator(prob_real_is_real, prob_fake_is_real):
     Returns:
         The total LS-GAN loss.
     """
-    return (tf.reduce_mean(tf.squared_difference(prob_real_is_real, 1)) +
-            tf.reduce_mean(tf.squared_difference(prob_fake_is_real, 0))) * 0.5
+    return (tf.reduce_mean(tf.math.squared_difference(prob_real_is_real, 1)) +
+            tf.reduce_mean(tf.math.squared_difference(prob_fake_is_real, 0))) * 0.5

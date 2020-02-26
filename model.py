@@ -31,7 +31,7 @@ def get_outputs(inputs, skip=False):
     fake_pool_b_mask = inputs['fake_pool_b_mask']
     transition_rate = inputs['transition_rate']
     donorm = inputs['donorm']
-    with tf.variable_scope("Model") as scope:
+    with tf.compat.v1.variable_scope("Model") as scope:
 
         current_autoenc = autoenc_upsample
         current_discriminator = discriminator
@@ -99,7 +99,7 @@ def get_outputs(inputs, skip=False):
 
 def autoenc_upsample(inputae, name):
 
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         f = 7
         ks = 3
         padding = "REFLECT"
@@ -141,7 +141,7 @@ def build_resnet_block(inputres, dim, name="resnet", padding="REFLECT"):
      CONSTANT
     :return: a single block of resnet.
     """
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         out_res = tf.pad(inputres, [[0, 0], [1, 1], [
             1, 1], [0, 0]], padding)
         out_res = layers.general_conv2d(
@@ -162,7 +162,7 @@ def build_resnet_block_Att(inputres, dim, name="resnet", padding="REFLECT"):
      CONSTANT
     :return: a single block of resnet.
     """
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         out_res = tf.pad(inputres, [[0, 0], [1, 1], [
             1, 1], [0, 0]], padding)
         out_res = layers.general_conv2d(
@@ -175,7 +175,7 @@ def build_resnet_block_Att(inputres, dim, name="resnet", padding="REFLECT"):
 
 def build_generator_resnet_9blocks(inputgen, name="generator", skip=False):
 
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         f = 7
         ks = 3
         padding = "CONSTANT"
@@ -222,7 +222,7 @@ def build_generator_resnet_9blocks(inputgen, name="generator", skip=False):
 
 def discriminator(inputdisc,  mask, transition_rate, donorm,  name="discriminator"):
 
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         mask = tf.cast(tf.greater_equal(mask, transition_rate), tf.float32)
         inputdisc = tf.multiply(inputdisc, mask)
         f = 4

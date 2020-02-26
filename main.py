@@ -4,7 +4,8 @@ import json
 import numpy as np
 import os
 import random
-from scipy.misc import imsave
+# from scipy.misc import imsave
+import imageio
 
 import argparse
 import tensorflow as tf
@@ -12,9 +13,12 @@ import tensorflow as tf
 import cyclegan_datasets
 import data_loader, losses, model
 
-tf.set_random_seed(1)
+# tf.set_random_seed(1)
+tf.random.set_seed(1)
 np.random.seed(0)
-slim = tf.contrib.slim
+# slim = tf.compact.v1.slim
+# global_step = tf.train.get_or_create_global_step()
+# global_step = tf.compat.v1.train.get_or_create_global_step()
 
 
 class CycleGAN:
@@ -60,14 +64,15 @@ class CycleGAN:
         self.fake_A/self.fake_B to corresponding generator.
         This is use to calculate cyclic loss
         """
-        self.input_a = tf.placeholder(
+        # tf.compat.v1.disable_v2_behavior()
+        self.input_a = tf.compat.v1.placeholder(
             tf.float32, [
                 1,
                 model.IMG_WIDTH,
                 model.IMG_HEIGHT,
                 model.IMG_CHANNELS
             ], name="input_A")
-        self.input_b = tf.placeholder(
+        self.input_b = tf.compat.v1.placeholder(
             tf.float32, [
                 1,
                 model.IMG_WIDTH,
@@ -75,28 +80,28 @@ class CycleGAN:
                 model.IMG_CHANNELS
             ], name="input_B")
 
-        self.fake_pool_A = tf.placeholder(
+        self.fake_pool_A = tf.compat.v1.placeholder(
             tf.float32, [
                 None,
                 model.IMG_WIDTH,
                 model.IMG_HEIGHT,
                 model.IMG_CHANNELS
             ], name="fake_pool_A")
-        self.fake_pool_B = tf.placeholder(
+        self.fake_pool_B = tf.compat.v1.placeholder(
             tf.float32, [
                 None,
                 model.IMG_WIDTH,
                 model.IMG_HEIGHT,
                 model.IMG_CHANNELS
             ], name="fake_pool_B")
-        self.fake_pool_A_mask = tf.placeholder(
+        self.fake_pool_A_mask = tf.compat.v1.placeholder(
             tf.float32, [
                 None,
                 model.IMG_WIDTH,
                 model.IMG_HEIGHT,
                 model.IMG_CHANNELS
             ], name="fake_pool_A_mask")
-        self.fake_pool_B_mask = tf.placeholder(
+        self.fake_pool_B_mask = tf.compat.v1.placeholder(
             tf.float32, [
                 None,
                 model.IMG_WIDTH,
@@ -104,13 +109,14 @@ class CycleGAN:
                 model.IMG_CHANNELS
             ], name="fake_pool_B_mask")
 
-        self.global_step = slim.get_or_create_global_step()
+        # self.global_step = tf.train.get_or_create_global_step()
+        self.global_step = tf.compat.v1.train.get_or_create_global_step()
 
         self.num_fake_inputs = 0
 
-        self.learning_rate = tf.placeholder(tf.float32, shape=[], name="lr")
-        self.transition_rate = tf.placeholder(tf.float32, shape=[], name="tr")
-        self.donorm = tf.placeholder(tf.bool, shape=[], name="donorm")
+        self.learning_rate = tf.compat.v1.placeholder(tf.float32, shape=[], name="lr")
+        self.transition_rate = tf.compat.v1.placeholder(tf.float32, shape=[], name="tr")
+        self.donorm = tf.compat.v1.placeholder(tf.bool, shape=[], name="donorm")
 
         inputs = {
             'images_a': self.input_a,
@@ -181,10 +187,11 @@ class CycleGAN:
             prob_fake_is_real=self.prob_fake_pool_b_is_real,
         )
 
-        optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=0.5)
-        self.model_vars = tf.trainable_variables()
+        optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate, beta1=0.5)
+        self.model_vars = tf.compat.v1.trainable_variables()
 
         d_A_vars = [var for var in self.model_vars if 'd_A' in var.name]
+        # print('d_A_vars', d_A_vars)
         g_A_vars = [var for var in self.model_vars if 'g_A/' in var.name]
         d_B_vars = [var for var in self.model_vars if 'd_B' in var.name]
         g_B_vars = [var for var in self.model_vars if 'g_B/' in var.name]
@@ -193,7 +200,9 @@ class CycleGAN:
 
 
         self.g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars+g_Ae_vars)
+        print('g_A_trainer',self.g_A_trainer)
         self.g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars+g_Be_vars)
+        print('g_B_trainer',self.g_B_trainer)
         self.g_A_trainer_bis = optimizer.minimize(g_loss_A, var_list=g_A_vars)
         self.g_B_trainer_bis = optimizer.minimize(g_loss_B, var_list=g_B_vars)
         self.d_A_trainer = optimizer.minimize(d_loss_A, var_list=d_A_vars)
@@ -206,6 +215,7 @@ class CycleGAN:
 
         # Summary variables for tensorboard
         self.g_A_loss_summ = tf.summary.scalar("g_A_loss", g_loss_A)
+        print('g_A_loss_summ : ', g_A_loss_summ)
         self.g_B_loss_summ = tf.summary.scalar("g_B_loss", g_loss_B)
         self.d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
         self.d_B_loss_summ = tf.summary.scalar("d_B_loss", d_loss_B)
@@ -254,12 +264,11 @@ class CycleGAN:
                 for name, tensor in zip(names, tensors):
                     image_name = name + str(epoch) + "_" + str(i) + ".jpg"
                     if 'mask_' in name:
-                        imsave(os.path.join(self._images_dir, image_name),
+                        imageio.imwrite(os.path.join(self._images_dir, image_name),
                                (np.squeeze(tensor[0]))
                                )
                     else:
-
-                        imsave(os.path.join(self._images_dir, image_name),
+                        imageio.imwrite(os.path.join(self._images_dir, image_name),
                                ((np.squeeze(tensor[0]) + 1) * 127.5).astype(np.uint8)
                                )
                     v_html.write(
@@ -307,12 +316,12 @@ class CycleGAN:
                     image_name = name + str(i) + ".jpg"
 
                     if 'mask_' in name:
-                        imsave(os.path.join(self._images_dir, image_name),
+                        imageio.imwrite(os.path.join(self._images_dir, image_name),
                                (np.squeeze(tensor[0]))
                                )
                     else:
 
-                        imsave(os.path.join(self._images_dir, image_name),
+                        imageio.imwrite(os.path.join(self._images_dir, image_name),
                                ((np.squeeze(tensor[0]) + 1) * 127.5).astype(np.uint8)
                                )
 
@@ -357,19 +366,30 @@ class CycleGAN:
             False, self._do_flipping)
 
         # Build the network
+        print('model setup started...')
         self.model_setup()
+        print('model setup completed...')
 
         # Loss function calculations
+        print('computing losses started...')
         self.compute_losses()
+        print('computing losses completed...')
 
         # Initializing the global variables
         init = (tf.global_variables_initializer(),
                 tf.local_variables_initializer())
 
+        print('train saving started...')
         saver = tf.train.Saver(max_to_keep=None)
+        print('train saving completed...')
 
+        print('get max_images started...')
         max_images = cyclegan_datasets.DATASET_TO_SIZES[self._dataset_name]
+        print('get max_images completed...')
+
         half_training = int(self._max_step / 2)
+
+        print('Session.......')
         with tf.Session() as sess:
             sess.run(init)
             # Restore the model to run the model from last checkpoint
@@ -604,9 +624,13 @@ def main():
                               switch, threshold_fg)
 
     if to_train > 0:
+        print('Invoking training method')
         cyclegan_model.train()
+        print('Completed invoking training method')
     else:
+        print('Invoking testing method')
         cyclegan_model.test()
+        print('Completed invoking testing method')
 
 
 if __name__ == '__main__':

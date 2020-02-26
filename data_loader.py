@@ -5,20 +5,23 @@ import model
 
 
 def _load_samples(csv_name, image_type):
-    filename_queue = tf.train.string_input_producer(
-        [csv_name])
 
-    reader = tf.TextLineReader()
+    tf.compat.v1.disable_eager_execution()
+
+    filename_queue = tf.compat.v1.train.string_input_producer([csv_name])
+    # filename_queue = tf.data.Dataset.from_tensor_slices([csv_name])
+
+    reader = tf.compat.v1.TextLineReader()
     _, csv_filename = reader.read(filename_queue)
 
     record_defaults = [tf.constant([], dtype=tf.string),
                        tf.constant([], dtype=tf.string)]
 
-    filename_i, filename_j = tf.decode_csv(
+    filename_i, filename_j = tf.io.decode_csv(
         csv_filename, record_defaults=record_defaults)
 
-    file_contents_i = tf.read_file(filename_i)
-    file_contents_j = tf.read_file(filename_j)
+    file_contents_i = tf.io.read_file(filename_i)
+    file_contents_j = tf.io.read_file(filename_j)
     if image_type == '.jpg':
         image_decoded_A = tf.image.decode_jpeg(
             file_contents_i, channels=model.IMG_CHANNELS)
@@ -57,29 +60,31 @@ def load_data(dataset_name, image_size_before_crop,
     }
 
     # Preprocessing:
-    inputs['image_i'] = tf.image.resize_images(
+    inputs['image_i'] = tf.image.resize(
         inputs['image_i'], [image_size_before_crop, image_size_before_crop])
-    inputs['image_j'] = tf.image.resize_images(
+    inputs['image_j'] = tf.image.resize(
         inputs['image_j'], [image_size_before_crop, image_size_before_crop])
 
     if do_flipping is True:
         inputs['image_i'] = tf.image.random_flip_left_right(inputs['image_i'], seed=1)
         inputs['image_j'] = tf.image.random_flip_left_right(inputs['image_j'], seed=1)
 
-    inputs['image_i'] = tf.random_crop(
+    inputs['image_i'] = tf.image.random_crop(
         inputs['image_i'], [model.IMG_HEIGHT, model.IMG_WIDTH, 3], seed=1)
-    inputs['image_j'] = tf.random_crop(
+    inputs['image_j'] = tf.image.random_crop(
         inputs['image_j'], [model.IMG_HEIGHT, model.IMG_WIDTH, 3], seed=1)
 
-    inputs['image_i'] = tf.subtract(tf.div(inputs['image_i'], 127.5), 1)
-    inputs['image_j'] = tf.subtract(tf.div(inputs['image_j'], 127.5), 1)
+    inputs['image_i'] = tf.subtract(tf.math.divide(inputs['image_i'], 127.5), 1)
+    inputs['image_j'] = tf.subtract(tf.math.divide(inputs['image_j'], 127.5), 1)
+
+    # tf.compat.v1.disable_v2_behavior()
 
     # Batch
     if do_shuffle is True:
         inputs['images_i'], inputs['images_j'] = tf.train.shuffle_batch(
             [inputs['image_i'], inputs['image_j']], 1, 5000, 100, seed=1)
     else:
-        inputs['images_i'], inputs['images_j'] = tf.train.batch(
+        inputs['images_i'], inputs['images_j'] = tf.compat.v1.train.batch(
             [inputs['image_i'], inputs['image_j']], 1)
 
     return inputs
